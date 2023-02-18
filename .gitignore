@@ -1,2 +1,3 @@
-services/scraper_service/news_scraper/news_scraper/__pycache__/
-services/scraper_service/news_scraper/news_scraper/spiders/__pycache__/
+*.json
+*__pycache__
+
