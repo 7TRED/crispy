@@ -5,7 +5,7 @@ from news_scraper.items import NewsScraperItem
 class VenturebeatarticlesSpider(scrapy.Spider):
     name = "venturebeatarticles"
     allowed_domains = ["venturebeat.com"]
-    start_urls = ["http://venturebeat.com/"]
+    start_urls = ["https://venturebeat.com/"]
 
     def parse(self, response):
         articleLinks = response.css("a.ArticleListing__title-link");
