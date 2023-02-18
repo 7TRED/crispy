@@ -1,8 +1,5 @@
 import scrapy
-import json
-from bs4 import BeautifulSoup
 from news_scraper.items import NewsScraperItem
-from requests import get
 
 
 def createUrls(page):
@@ -27,24 +24,6 @@ def getPageUrls(num_pages):
     return output
 
 
-def getContent(url):
-    resp = get(url)
-    soup = BeautifulSoup(resp.text, "lxml")
-    header = soup.select('header h1')[0].getText()
-    hawk = soup.select("div.hawk-title-container")
-    body = soup.select("div#article-body")[0].getText().split("\n\n")[2]
-    if len(hawk) > 0:
-        body = body.split(hawk[0].getText())[0]
-    article_time = soup.select("time.relative-date")[0]
-
-    output = {}
-    output["title"] = header
-    output["body"] = body
-    output["date"] = article_time.attrs.get("datetime")
-
-    return output
-
-
 class TechRadarSpider(scrapy.Spider):
     name = "tech-radar"
     num_of_pages = 5
@@ -53,15 +32,29 @@ class TechRadarSpider(scrapy.Spider):
     start_urls = getPageUrls(num_pages=num_of_pages)
 
     def parse(self, response):
-        article_links = [a.attrib["href"]
-                         for a in response.css("a.article-link")]
+        article_links = response.css("a.article-link")
+        return response.follow_all(article_links, self.parseArticle)
 
-        for link in article_links:
-            output = getContent(link)
-            article = NewsScraperItem()
-            article['title'] = output.get("title")
-            article['content'] = output.get("body")
-            article['url'] = link
-            article['date'] = output.get("date")
+    def parseArticle(self, response):
+        output = self._getContent(response)
+        article = NewsScraperItem()
+        article['title'] = output.get("title")
+        article['content'] = output.get("body")
+        article['url'] = response.url
+        article['date'] = output.get("date")
 
-            yield article
+        yield article
+
+
+    def _getContent(self, response):
+        header = response.css('header h1::text').get()
+        body = response.css("div#article-body > p::text, div#article-body > p > a::text, div#article-body > p > a > u::text").getall()
+        body = " ".join(body)
+        article_time = response.css("time.relative-date::attr(datetime)").get()
+
+        output = {}
+        output["title"] = header
+        output["body"] = body
+        output["date"] = article_time
+
+        return output
