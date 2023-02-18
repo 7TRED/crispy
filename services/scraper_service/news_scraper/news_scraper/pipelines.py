@@ -9,11 +9,27 @@ import sys
 import pymongo
 from itemadapter import ItemAdapter
 from scrapy.exceptions import NotConfigured
+from scrapy.exceptions import DropItem
 from news_scraper.items import NewsScraperItem
 
 
-class MongodbPipeline:
+class ItemValidationPipeline:
+
+    REQUIRED_FIELDS = ['title', 'date', 'url', 'content']
     
+    def process_item(self, item, spider):
+        if not isinstance(item, NewsScraperItem):
+            return item
+
+        for field in self.REQUIRED_FIELDS:
+            if not item[field]:
+                raise DropItem(item)
+
+        return item
+
+
+class MongodbPipeline:
+
     def __init__(self, mongo_uri, mongo_db):
         self.mongo_uri = mongo_uri
         self.mongo_db = mongo_db
@@ -38,17 +54,17 @@ class MongodbPipeline:
         self.client.close()
 
     def process_item(self, item, spider):
-        if isinstance(item, NewsScraperItem): 
+        if isinstance(item, NewsScraperItem):
             # insert items according to date
             collection = item['date'].split('T')[0]
-            
+
             # check if item with same url already exists
             # if it exists return item and don't insert it
             # else insert it
             old_item = self.db[collection].find_one({'url': item['url']})
-            if(old_item):
+            if (old_item):
                 return item
-            
+
             # insert item
             self.db[collection].insert_one(ItemAdapter(item).asdict())
 
