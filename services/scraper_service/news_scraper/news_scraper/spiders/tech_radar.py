@@ -2,59 +2,25 @@ import scrapy
 from news_scraper.items import NewsScraperItem
 
 
-def createUrls(page):
-    categories = ["computing", "software", "phone-and-communications"]
-    urls = []
-    for category in categories:
-        if page == 1:
-            urls.append(f"https://www.techradar.com/news/{category}")
-        else:
-            urls.append(
-                f"https://www.techradar.com/news/{category}/page/{page}")
-    return urls
-
-
-def getPageUrls(num_pages):
-    output = []
-    for i in range(1, num_pages+1):
-        urls = createUrls(i)
-        for url in urls:
-            output.append(url)
-
-    return output
-
-
 class TechRadarSpider(scrapy.Spider):
     name = "tech-radar"
     num_of_pages = 5
     allowed_domains = ["techradar.com"]
-
-    start_urls = getPageUrls(num_pages=num_of_pages)
-
+    start_urls = [f"https://www.techradar.com/news/{category}/page/{i}"
+                  for i in range(1, num_of_pages+1)
+                  for category in ["computing", "software", "phone-and-communications"]]
+    
     def parse(self, response):
-        article_links = response.css("a.article-link")
-        return response.follow_all(article_links, self.parseArticle)
+        for article_link in response.css("a.article-link::attr(href)").getall():
+            yield response.follow(article_link, self.parse_article)
 
-    def parseArticle(self, response):
-        output = self._getContent(response)
-        article = NewsScraperItem()
-        article['title'] = output.get("title")
-        article['content'] = output.get("body")
-        article['url'] = response.url
-        article['date'] = output.get("date")
+    def parse_article(self, response):
+        title = response.css('header h1::text').get()
+        content = " ".join(response.css("div#article-body > p::text, div#article-body > p > a::text, div#article-body > p > a > u::text").getall())
+        date = response.css("time.relative-date::attr(datetime)").get()
+        url = response.url
 
-        yield article
+        item = NewsScraperItem(title=title, content=content, date=date, url=url)
 
-
-    def _getContent(self, response):
-        header = response.css('header h1::text').get()
-        body = response.css("div#article-body > p::text, div#article-body > p > a::text, div#article-body > p > a > u::text").getall()
-        body = " ".join(body)
-        article_time = response.css("time.relative-date::attr(datetime)").get()
-
-        output = {}
-        output["title"] = header
-        output["body"] = body
-        output["date"] = article_time
-
-        return output
+        if item['title'] and item['date'] and item['url'] and item['content']:
+            yield item

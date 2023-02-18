@@ -20,10 +20,6 @@ class MashableIndiaSpider(scrapy.Spider):
         content = response.css("div#id_text > p::text, div#id_text > p > a::text").getall()
         content = " ".join(content);
 
-        article = NewsScraperItem()
-        article["title"] = title
-        article["date"] = date
-        article["content"] = content
-        article["url"] = response.url
-
-        yield article
+        article = NewsScraperItem(title=title, date=date, content=content, url=response.url)
+        if article['title'] and article['date'] and article['url'] and article['content']:
+            yield article
