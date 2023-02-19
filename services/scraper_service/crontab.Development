@@ -1,0 +1,2 @@
+PATH="/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+0-59/2 * * * * /usr/project/jobs/schedule_spiders.sh 2>&1 | tee -a /var/log/cron.log

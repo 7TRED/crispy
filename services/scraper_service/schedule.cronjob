@@ -1,2 +1,0 @@
-PATH="/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-0 0-23/2 * * * cd /usr/project/news_scraper && scrapyd-client schedule -p news_scraper \* >> /var/log/cron.log 2>&1
