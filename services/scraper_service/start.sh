@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 cd /usr/project/news_scraper
 
 scrapyd-deploy
