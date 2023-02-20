@@ -8,18 +8,23 @@ class VenturebeatarticlesSpider(scrapy.Spider):
     start_urls = ["https://venturebeat.com/"]
 
     def parse(self, response):
-        articleLinks = response.css("a.ArticleListing__title-link");
-        return response.follow_all(articleLinks, self.parseArticle);
+        article_links = response.css("a.ArticleListing__title-link")
+        yield from response.follow_all(article_links, self.parse_article)
 
-    def parseArticle(self, response):
+    def parse_article(self, response):
+        item = self.create_item(response)
+        if item:
+            yield item
 
+    def create_item(self, response):
+        title = response.css("h1.article-title::text").get()
+        date = response.css("time.the-time::attr(datetime)").get()
         content = response.css("div.article-content > p::text, div.article-content > p > a::text").getall()
         content = " ".join(content)
+        url = response.url
 
-        item = NewsScraperItem()
-        item['title'] = response.css("h1.article-title::text").get();
-        item['date'] = response.css("time.the-time::attr(datetime)").get();
-        item['content'] = content;
-        item['url'] = response.url;
-
-        yield item;
+        if title and date and content and url:
+            item = NewsScraperItem(title=title, date=date, content=content, url=url)
+            return item
+        else:
+            self.logger.warning("Failed to extract data from %s", response.url)
