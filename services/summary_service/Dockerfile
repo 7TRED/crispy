@@ -4,7 +4,7 @@ WORKDIR /app
 
 ENV MONGO_URI=
 
-COPY . .
+COPY . /app
 
 RUN npm install 
 
