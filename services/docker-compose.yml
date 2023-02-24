@@ -28,8 +28,13 @@ services:
     build:
       context: ./scraper_service
     environment:
-      - MONGO_URI=mongodb://root:root@scraper-db:27017
-      - MONGO_DATABASE=scraper
+      MONGO_URI: mongodb://root:root@scraper-db:27017
+      MONGO_DATABASE: scraper
+      RMQ_HOST: rbmq
+      RMQ_PORT: 5672
+      RMQ_QUEUE: ""
+      RMQ_EXCHANGE: "articles"
+      RMQ_ROUTING_KEY: "scraped.articles"
     restart: unless-stopped
     depends_on:
       - "scraper-db"
@@ -39,7 +44,20 @@ services:
     image: rabbitmq:3
     container_name: rbmq
     volumes:
-      - rbmq-data: /var/lib/rabbitmq
+      - rbmq-data:/var/lib/rabbitmq
+
+  summarization:
+    build:
+      context: ./summarization_service
+    environment:
+      RMQ_HOST: rbmq
+      RMQ_PORT: 5672
+      RMQ_QUEUE: ""
+      RMQ_EXCHANGE: "articles"
+      RMQ_ROUTING_KEY: "scraped.articles"
+    restart: always
+    depends_on:
+      - "rbmq"
 volumes:
   scraper-data:
   rbmq-data:
