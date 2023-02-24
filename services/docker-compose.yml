@@ -56,4 +56,6 @@ services:
       - "3000:3000"
     depends_on:
       - "summary-api-db"
-
+    volumes:
+      - ./summary_service:/app
+    restart: always

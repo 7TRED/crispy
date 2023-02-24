@@ -2,7 +2,7 @@ const express = require('express');
 import dotenv from 'dotenv';
 import { Application, Request, Response } from 'express';
 import mongoose, { ConnectOptions } from 'mongoose';
-const { Article } = require('./model/ArticleModel');
+const Article = require('./model/ArticleModel');
 
 dotenv.config();
 const app: Application = express();
@@ -25,10 +25,10 @@ app.get('/', async (_req: Request, res: Response) => {
 app.post('/article', async (req: Request, res: Response) => {
     try {
         const article = new Article({
-            title:req.body.title,
-            content:req.body.content,
-            date:new Date(req.body.date),
-            url:req.body.url,
+            title: req.body.title,
+            content: req.body.content,
+            date: new Date(req.body.date),
+            url: req.body.url
         });
         await article.save();
         res.send('Article saved!!');
