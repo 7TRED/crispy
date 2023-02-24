@@ -51,7 +51,7 @@ services:
   summary-api:
     build: ./summary_service
     environment:
-      - MONGO_URI= mongodb://root:root@summary-api-db:27017
+      MONGO_URI: mongodb://root:root@summary-api-db:27017
     ports:
       - "3000:3000"
     depends_on:

@@ -25,8 +25,10 @@ app.get('/', async (_req: Request, res: Response) => {
 app.post('/article', async (req: Request, res: Response) => {
     try {
         const article = new Article({
-            name: req.body.name,
-            email: req.body.email
+            title:req.body.title,
+            content:req.body.content,
+            date:Date.parse(req.body.date),
+            url:req.body.url,
         });
         await article.save();
         res.send('Article saved!!');
