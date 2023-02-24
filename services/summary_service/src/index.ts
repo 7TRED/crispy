@@ -27,7 +27,7 @@ app.post('/article', async (req: Request, res: Response) => {
         const article = new Article({
             title:req.body.title,
             content:req.body.content,
-            date:Date.parse(req.body.date),
+            date:new Date(req.body.date),
             url:req.body.url,
         });
         await article.save();
