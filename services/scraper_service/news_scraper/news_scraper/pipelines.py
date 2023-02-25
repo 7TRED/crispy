@@ -8,6 +8,8 @@ import logging
 
 # useful for handling different item types with a single interface
 import sys
+import threading
+from queue import Queue
 
 import pika
 import pymongo
@@ -79,17 +81,35 @@ class MongodbPipeline:
 
 
 class MessageQueuePipeline:
-    def __init__(self, rmq_host, rmq_port, rmq_queue, rmq_exchange, rmq_routing_key):
+    """
+    A class for publishing messages to a RabbitMQ broker.
+    """
+
+    def __init__(
+        self,
+        rmq_host,
+        rmq_port,
+        rmq_user,
+        rmq_pass,
+        rmq_queue,
+        rmq_exchange,
+        rmq_routing_key,
+    ):
         print("Initializing RMQ pipeline")
         self.rmq_host = rmq_host
         self.rmq_port = rmq_port
+        self.rmq_user = rmq_user
+        self.rmq_pass = rmq_pass
         self.rmq_queue = rmq_queue
         self.rmq_exchange = rmq_exchange
         self.rmq_routing_key = rmq_routing_key
         self.rmq_exchange_type = "topic"
+        self.queue = Queue()
 
-        self.connect_config = Publisher.PublisherConnectConfig(
-            host=self.rmq_host, port=self.rmq_port
+        self.connect_params = pika.ConnectionParameters(
+            host=self.rmq_host,
+            port=self.rmq_port,
+            credentials=pika.PlainCredentials(self.rmq_user, self.rmq_pass),
         )
         self.type_config = Publisher.PublisherTypeConfig(
             queue=self.rmq_queue,
@@ -112,6 +132,8 @@ class MessageQueuePipeline:
         return cls(
             rmq_host=crawler.settings.get("RMQ_HOST"),
             rmq_port=crawler.settings.get("RMQ_PORT", 5672),
+            rmq_user=crawler.settings.get("RMQ_USER"),
+            rmq_pass=crawler.settings.get("RMQ_PASS"),
             rmq_queue=crawler.settings.get("RMQ_QUEUE"),
             rmq_exchange=crawler.settings.get("RMQ_EXCHANGE"),
             rmq_routing_key=crawler.settings.get("RMQ_ROUTING_KEY"),
@@ -120,14 +142,18 @@ class MessageQueuePipeline:
     def open_spider(self, spider):
         try:
             print("Connecting to RabbitMQ")
-            self.publisher = Publisher(self.connect_config, self.type_config)
+            self.publisher = Publisher(self.connect_params, self.type_config)
             self.publisher.connect()
             logging.info("Connected to RabbitMQ")
+            threading.Thread(target=self.worker, daemon=True).start()
         except Exception as e:
             print(f"Error connecting to RabbitMQ: {e}")
             raise e
 
     def close_spider(self, spider):
+        # wait for queue to be empty
+        self.queue.join()
+        # close connection
         self.publisher.close()
 
     def process_item(self, item, spider):
@@ -143,12 +169,21 @@ class MessageQueuePipeline:
                     ),
                 )
 
-                self.publisher.publish(rmq_message)
-                print(f"Sent item to RabbitMQ: {item['url']}")
+                self.queue.put(rmq_message)
                 return item
         except Exception as e:
             print(f"Error sending item to RabbitMQ: {e}")
             raise e
+
+    def worker(self):
+        while True:
+            try:
+                message = self.queue.get()
+                self.publisher.publish(message)
+                self.queue.task_done()
+            except Exception as e:
+                logging.error(f"Error sending message to RabbitMQ: {e}")
+                raise e
 
 
 class NewsScraperPipeline:
