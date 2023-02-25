@@ -19,11 +19,12 @@ class Publisher:
             queue: Optional[str] = None,
             routing_key: Optional[str] = None,
             exchange_name: str = "",
-            exchange_type: str = "direct",
+            exchange_type: str = "",
             confirm_delivery: bool = True,
             exclusive: bool = False,
             durable: bool = True,
             auto_delete: bool = False,
+            connection_timeout: Optional[float] = None,
             dead_letter_handling: bool = False,
             message_ttl: Optional[int] = None,
             dead_letter_exchange: Optional[str] = None,
@@ -40,6 +41,11 @@ class Publisher:
                 exclusive (bool): Whether the queue should be exclusive to the publisher or not.
                 durable (bool): Whether the queue/exchange should persist after the broker restarts or not.
                 auto_delete (bool): Whether the queue/exchange should be deleted after the last consumer disconnects or not.
+                connection_timeout (float): The timeout for the connection to the broker.
+                dead_letter_handling (bool): Whether to enable dead letter handling or not.
+                message_ttl (int): The time to live for messages in milliseconds.
+                dead_letter_exchange (str): The name of the exchange to publish dead letters to.
+                dead_letter_routing_key (str): The routing key to use when publishing dead letters.
             """
             self.queue = queue
             self.routing_key = routing_key
@@ -49,44 +55,24 @@ class Publisher:
             self.exclusive = exclusive
             self.durable = durable
             self.auto_delete = auto_delete
+            self.connection_timeout = connection_timeout
             self.dead_letter_handling = dead_letter_handling
             self.message_ttl = message_ttl
             self.dead_letter_exchange = dead_letter_exchange
             self.dead_letter_routing_key = dead_letter_routing_key
 
-    class PublisherConnectConfig:
-        def __init__(
-            self,
-            host: str = "localhost",
-            port: str = 5672,
-            virtual_host: str = "/",
-            username: str = "guest",
-            password: str = "guest",
-        ):
-            """
-            Initializes the configuration object for a publisher connection.
-
-            Args:
-                host (str): The host of the broker to connect to.
-                port (int): The port of the broker to connect to.
-                username (str): The username to use for authentication.
-                password (str): The password to use for authentication.
-            """
-            self.host = host
-            self.port = port
-            self.virtual_host = virtual_host
-            self.credentials = pika.PlainCredentials(username, password)
-
     def __init__(
-        self, connect_config: PublisherConnectConfig, type_config: PublisherTypeConfig
+        self,
+        connect_params: pika.ConnectionParameters,
+        type_config: PublisherTypeConfig,
     ):
         """
         Initializes the publisher.
-
         Args:
-            config (PublisherConnectConfig): The configuration object for the publisher connection.
+            connect_params (pika.ConnectionParameters): The connection parameters for the broker.
+            type_config (PublisherTypeConfig): The configuration object for the publisher type.
         """
-        self.connect_config = connect_config
+        self.connect_params = connect_params
         self.type_config = type_config
         self.connection = None
         self.channel = None
@@ -101,15 +87,23 @@ class Publisher:
         if self.is_connected:
             raise Exception("Publisher is already connected.")
         # Connect to the broker.
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host=self.connect_config.host,
-                port=self.connect_config.port,
-                credentials=self.connect_config.credentials,
-                virtual_host=self.connect_config.virtual_host,
-            )
+
+        logging.info(
+            f"[x] - Connecting to RabbitMQ server: amqp://{self.connect_params.host}:{self.connect_params.port}"
         )
 
+        self.connection = pika.BlockingConnection(
+            self.connect_params, self.type_config.connection_timeout
+        )
+
+        logging.info(
+            "[x] - Connected to RabbitMQ server: amqp://%s:%s",
+            self.connect_params.host,
+            self.connect_params.port,
+        )
+        ## Add a info log with time stamp in format [timestamp] [x] - message
+
+        logging.info("[x]- Creating channel")
         self.channel = self.connection.channel()
 
         # Enable publisher confirms if needed.
@@ -121,8 +115,6 @@ class Publisher:
     def connect(self):
         """
         Connects to the broker.
-        Args:
-            config (PublisherTypeConfig): The configuration object for the publisher type.
         """
         num_of_retries = self._max_retries_connection
         while True:
@@ -130,10 +122,13 @@ class Publisher:
                 self._connect()
                 self._setup_channel()
                 break
-            except Exception as e:
+
+            except pika.exceptions.AMQPConnectionError as e:
+
                 logging.error("Error connecting to RabbitMQ server: %s\n", e)
                 logging.error("Retrying in 3 seconds...\n")
                 logging.error("Remaining retries: %s\n", num_of_retries)
+
                 num_of_retries -= 1
                 if num_of_retries == 0:
                     raise e
@@ -143,14 +138,16 @@ class Publisher:
 
     def _setup_channel(self):
         # Declare the exchange.
-        self.channel.exchange_declare(
-            exchange=self.type_config.exchange_name,
-            exchange_type=self.type_config.exchange_type,
-            durable=self.type_config.durable,
-            auto_delete=self.type_config.auto_delete,
-        )
 
-        if self.type_config.exchange_type == "direct" or self.type_config.queue:
+        if self.type_config.exchange_name and self.type_config.exchange_type:
+            self.channel.exchange_declare(
+                exchange=self.type_config.exchange_name,
+                exchange_type=self.type_config.exchange_type,
+                durable=self.type_config.durable,
+                auto_delete=self.type_config.auto_delete,
+            )
+
+        if self.type_config.queue:
             # If the exchange type is direct, we need to declare a queue and bind it to the exchange.
             args = {}
             if self.type_config.dead_letter_handling:
@@ -200,8 +197,6 @@ class Publisher:
         Publishes a message to the broker.
         Args:
             message (RMQMessage): The message to publish.
-            properties (pika.BasicProperties): The properties of the message.
-
         Returns:
             bool: Whether the message was delivered or not.
         """
