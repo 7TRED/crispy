@@ -1,16 +1,16 @@
 version: "3.8"
 
 services:
-  # scraper-db:
-  #   image: mongo:latest
-  #   container_name: scraper-db
-  #   restart: unless-stopped
-  #   # volumes not needed for now
-  #   # volumes:
-  #     # - scraper-data:/data/db
-  #   environment:
-  #     MONGO_INITDB_ROOT_USERNAME: root
-  #     MONGO_INITDB_ROOT_PASSWORD: root
+  scraper-db:
+    image: mongo:latest
+    container_name: scraper-db
+    restart: unless-stopped
+    # volumes not needed for now
+    # volumes:
+    # - scraper-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
 
   mongo-express:
     image: mongo-express
@@ -25,15 +25,15 @@ services:
     depends_on:
       - "summary-api-db"
 
-  # scraper:
-  #   build:
-  #     context: ./scraper_service
-  #   environment:
-  #     - MONGO_URI=mongodb://root:root@scraper-db:27017
-  #     - MONGO_DATABASE=scraper
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - "scraper-db"
+  scraper:
+    build:
+      context: ./scraper_service
+    environment:
+      - MONGO_URI=mongodb://root:root@scraper-db:27017
+      - MONGO_DATABASE=scraper
+    restart: unless-stopped
+    depends_on:
+      - "scraper-db"
 
   summary-api-db:
     image: mongo:latest
