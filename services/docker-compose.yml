@@ -5,9 +5,8 @@ services:
     image: mongo:latest
     container_name: scraper-db
     restart: unless-stopped
-    # volumes not needed for now
-    # volumes:
-    # - scraper-data:/data/db
+    volumes:
+      - scraper-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
@@ -29,11 +28,36 @@ services:
     build:
       context: ./scraper_service
     environment:
-      - MONGO_URI=mongodb://root:root@scraper-db:27017
-      - MONGO_DATABASE=scraper
+      MONGO_URI: mongodb://root:root@scraper-db:27017
+      MONGO_DATABASE: scraper
+      RMQ_HOST: rbmq
+      RMQ_PORT: 5672
+      RMQ_QUEUE: ""
+      RMQ_EXCHANGE: "articles"
+      RMQ_ROUTING_KEY: "scraped.articles"
     restart: unless-stopped
     depends_on:
       - "scraper-db"
+      - "rbmq"
+
+  rbmq:
+    image: rabbitmq:3
+    container_name: rbmq
+    volumes:
+      - rbmq-data:/var/lib/rabbitmq
+
+  summarization:
+    build:
+      context: ./summarization_service
+    environment:
+      RMQ_HOST: rbmq
+      RMQ_PORT: 5672
+      RMQ_QUEUE: ""
+      RMQ_EXCHANGE: "articles"
+      RMQ_ROUTING_KEY: "scraped.articles"
+    restart: always
+    depends_on:
+      - "rbmq"
 
   summary-api-db:
     image: mongo:latest
@@ -61,3 +85,5 @@ services:
 
 volumes:
   node_modules:
+  scraper-data:
+  rbmq-data:
