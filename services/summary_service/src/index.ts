@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGO_URI!, { useNewUrlParser: true, useUnifiedTopo
 
 app.get('/', async (_req: Request, res: Response) => {
     try {
-        const articles = await Article.find({});
+        const articles = await Article.find({}).orderBy({ date: -1 }).skip(10).limit(10);
         res.send(articles);
     } catch (e) {
         res.send(e);
