@@ -15,8 +15,8 @@ flowchart TB;
         L -->|Receives Raw Text| C[Natural Language Processing Microservice]
         B -->|Stores Scraped Data| P[Scraping DB]
     end
-    subgraph Natural Language Processing Microservice
-        C[Natural Language Processing Microservice]
+    subgraph Summarization Service
+        C[Summarization Service]
         C -->|Sends Summaries| M[RabbitMQ: summaries]
         C -->|Stores Summaries| Q[Summaries DB]
     end
