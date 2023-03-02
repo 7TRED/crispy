@@ -56,38 +56,38 @@ Overall, this architecture allows for efficient and scalable processing of the t
 ## DFD Diagram
 
 ```mermaid
-graph TD;
+raph TD;
     subgraph External Systems
         A[Technical News Websites]
     end
     subgraph Microservices
-        C[Scraping Microservice]
-        D[Summarization Service]
-        E[API Gateway Microservice]
-        F[Text-to-Speech Microservice]
-        G[Audio Streaming Microservice]
+        B[Scraping Microservice]
+        C[Summarization Service]
+        D[API Gateway Microservice]
+        E[Text-to-Speech Microservice]
+        F[Audio Streaming Microservice]
     end
     subgraph Databases
-        H[Scraping DB]
-        I[Summaries DB]
-        J[Text-to-Speech DB]
+        G[Scraping DB]
+        H[Summaries DB]
+        I[Text-to-Speech DB]
     end
     subgraph Message Broker
-        K[RabbitMQ]
+        J[RabbitMQ]
     end
     
-    A -->|HTTP Requests| C
-    C -->|Sends Raw Text| K
-    K -->|Receives Raw Text| D
-    D -->|Sends Summaries| K
-    K -->|Receives Summaries| E
-    D -->|Stores Summaries| I
-    D -->|Sends Text| K
-    K -->|Receives Text| F
-    F -->|Sends Audio Files| K
-    K -->|Receives Audio Files| G
-    F -->|Stores Text| J
-    C -->|Stores Scraped Data| H
+    A -->|HTTP Requests| B
+    B -->|Sends Raw Text| J
+    J -->|Receives Raw Text| C
+    C -->|Sends Summaries| J
+    J -->|Receives Summaries| D
+    C -->|Stores Summaries| H
+    C -->|Sends Text| J
+    J -->|Receives Text| E
+    E -->|Sends Audio Files| J
+    J -->|Receives Audio Files| F
+    E -->|Stores Text| I
+    B -->|Stores Scraped Data| G
 
 ```
 
