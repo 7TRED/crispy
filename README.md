@@ -61,15 +61,15 @@ sequenceDiagram
     participant ScrapingMicroservice
     participant ScrapingDB
     participant RabbitMQ
-    participant NLPMicroservice
+    participant SummarizationService
     
     TechnicalNewsWebsites->>ScrapingMicroservice: HTTP Request
     activate ScrapingMicroservice
     ScrapingMicroservice->>RabbitMQ: Send scraped data
     activate RabbitMQ
-    RabbitMQ->>NLPMicroservice: Receive scraped data
-    activate NLPMicroservice
-    deactivate NLPMicroservice
+    RabbitMQ->>SummarizationService: Receive scraped data
+    activate SummarizationService
+    deactivate SummarizationService
     deactivate RabbitMQ
     ScrapingMicroservice->>ScrapingDB: Store scraped data
     ScrapingMicroservice->>ScrapingMicroservice: Return response
