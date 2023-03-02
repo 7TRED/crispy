@@ -53,6 +53,45 @@ In this architecture, we have several microservices working together to provide 
 
 Overall, this architecture allows for efficient and scalable processing of the technical news data, summarization, and text-to-speech generation, with separate microservices handling each task.
 
+## DFD Diagram
+
+```mermaid
+graph TD;
+    subgraph External Systems
+        A[Technical News Websites]
+    end
+    subgraph Microservices
+        B[Scraping Microservice]
+        C[Summarization Service]
+        D[API Gateway Microservice]
+        E[Text-to-Speech Microservice]
+        F[Audio Streaming Microservice]
+    end
+    subgraph Databases
+        G[Scraping DB]
+        H[Summaries DB]
+        I[Text-to-Speech DB]
+    end
+    subgraph Message Broker
+        J[RabbitMQ]
+    end
+    
+    A -->|HTTP Requests| B
+    B -->|Sends Raw Text| J
+    J -->|Receives Raw Text| C
+    C -->|Sends Summaries| J
+    J -->|Receives Summaries| D
+    C -->|Stores Summaries| H
+    D -->|HTTP Responses| A
+    C -->|Sends Text| J
+    J -->|Receives Text| E
+    E -->|Sends Audio Files| J
+    J -->|Receives Audio Files| F
+    E -->|Stores Text| I
+    B -->|Stores Scraped Data| G
+
+```
+
 ## Sequence Diagram of Scraper Service
 
 ```mermaid
