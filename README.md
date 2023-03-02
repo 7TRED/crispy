@@ -88,6 +88,7 @@ graph TD;
     J -->|Receives Audio Files| F
     E -->|Stores Text| I
     B -->|Stores Scraped Data| G
+    D -->|Serves Summary| A
 
 ```
 
