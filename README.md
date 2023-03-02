@@ -269,17 +269,17 @@ Overall, this class diagram shows the components of the NLPMicroservice and thei
 sequenceDiagram
     participant ScrapingMicroservice
     participant RabbitMQ
-    participant NaturalLanguageProcessingMicroservice
+    participant SummarizationService
     participant SummariesDB
 
     ScrapingMicroservice->>RabbitMQ: Sends scraped data
     activate RabbitMQ
-    RabbitMQ->>NaturalLanguageProcessingMicroservice: Receives scraped data
-    activate NaturalLanguageProcessingMicroservice
-    NaturalLanguageProcessingMicroservice->>SummariesDB: Stores summaries
-    SummariesDB-->>NaturalLanguageProcessingMicroservice: Summary stored
-    NaturalLanguageProcessingMicroservice->>RabbitMQ: Sends summaries
-    deactivate NaturalLanguageProcessingMicroservice
+    RabbitMQ->>SummarizationService: Receives scraped data
+    activate SummarizationService
+    SummarizationService->>SummariesDB: Stores summaries
+    SummariesDB-->>SummarizationService: Summary stored
+    SummarizationService->>RabbitMQ: Sends summaries
+    deactivate SummarizationService
     deactivate RabbitMQ
 ```
 
