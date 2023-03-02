@@ -56,7 +56,7 @@ Overall, this architecture allows for efficient and scalable processing of the t
 ## DFD Diagram
 
 ```mermaid
-raph TD;
+graph TD;
     subgraph External Systems
         A[Technical News Websites]
     end
