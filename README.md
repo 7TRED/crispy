@@ -59,6 +59,7 @@ Overall, this architecture allows for efficient and scalable processing of the t
 graph TD;
     subgraph External Systems
         A[Technical News Websites]
+        K[User]
     end
     subgraph Microservices
         B[Scraping Microservice]
@@ -82,13 +83,13 @@ graph TD;
     C -->|Sends Summaries| J
     J -->|Receives Summaries| D
     C -->|Stores Summaries| H
-    D -->|HTTP Responses| A
     C -->|Sends Text| J
     J -->|Receives Text| E
     E -->|Sends Audio Files| J
     J -->|Receives Audio Files| F
     E -->|Stores Text| I
     B -->|Stores Scraped Data| G
+    D -->|Serves summary| K
 
 ```
 
