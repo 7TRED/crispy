@@ -10,10 +10,9 @@ ENV RMQ_HOST=
 ENV RMQ_PORT=
 ENV RMQ_USER=guest
 ENV RMQ_PASS=guest
-ENV RMQ_QUEUE=
-ENV RMQ_EXCHANGE=
-ENV RMQ_ROUTING_KEY=
+ENV MONGO_URI=
+ENV MONGO_DB=
 
 COPY . .
 
-CMD [ "python", "./main.py" ]
+CMD [ "python", "-m", "summarizer" ]

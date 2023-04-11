@@ -52,20 +52,19 @@ services:
     environment:
       RMQ_HOST: rbmq
       RMQ_PORT: 5672
-      RMQ_QUEUE: ""
-      RMQ_EXCHANGE: "articles"
-      RMQ_ROUTING_KEY: "scraped.articles"
+      MONGO_URI: mongodb://root:root@summary-api-db:27017
+      MONGO_DB: summary
     restart: always
     depends_on:
+      - "summary-api-db"
       - "rbmq"
 
   summary-api-db:
     image: mongo:latest
     container_name: summary-api-db
     restart: unless-stopped
-    # volumes not needed for now
-    # volumes:
-    # - scraper-data:/data/db
+    volumes:
+      - summary-data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
@@ -87,3 +86,4 @@ volumes:
   node_modules:
   scraper-data:
   rbmq-data:
+  summary-data:

@@ -5,10 +5,9 @@ name = "pypi"
 
 [packages]
 pika = "*"
-transformers = "*"
-torch = "*"
-sentencepiece = "*"
 protobuf = "==3.20.*"
+requests = "*"
+pymongo = "*"
 
 [dev-packages]
 
