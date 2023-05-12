@@ -15,8 +15,8 @@ flowchart TB;
         L -->|Receives Raw Text| C[Natural Language Processing Microservice]
         B -->|Stores Scraped Data| P[Scraping DB]
     end
-    subgraph Natural Language Processing Microservice
-        C[Natural Language Processing Microservice]
+    subgraph Summarization Service
+        C[Summarization Service]
         C -->|Sends Summaries| M[RabbitMQ: summaries]
         C -->|Stores Summaries| Q[Summaries DB]
     end
@@ -53,6 +53,45 @@ In this architecture, we have several microservices working together to provide 
 
 Overall, this architecture allows for efficient and scalable processing of the technical news data, summarization, and text-to-speech generation, with separate microservices handling each task.
 
+## DFD Diagram
+
+```mermaid
+graph TD;
+    subgraph External Systems
+        A[Technical News Websites]
+    end
+    subgraph Microservices
+        B[Scraping Microservice]
+        C[Summarization Service]
+        D[API Gateway Microservice]
+        E[Text-to-Speech Microservice]
+        F[Audio Streaming Microservice]
+    end
+    subgraph Databases
+        G[Scraping DB]
+        H[Summaries DB]
+        I[Text-to-Speech DB]
+    end
+    subgraph Message Broker
+        J[RabbitMQ]
+    end
+    
+    A -->|HTTP Requests| B
+    B -->|Sends Raw Text| J
+    J -->|Receives Raw Text| C
+    C -->|Sends Summaries| J
+    J -->|Receives Summaries| D
+    C -->|Stores Summaries| H
+    C -->|Sends Text| J
+    J -->|Receives Text| E
+    E -->|Sends Audio Files| J
+    J -->|Receives Audio Files| F
+    E -->|Stores Text| I
+    B -->|Stores Scraped Data| G
+    D -->|Serves Summary| A
+
+```
+
 ## Sequence Diagram of Scraper Service
 
 ```mermaid
@@ -61,15 +100,15 @@ sequenceDiagram
     participant ScrapingMicroservice
     participant ScrapingDB
     participant RabbitMQ
-    participant NLPMicroservice
+    participant SummarizationService
     
     TechnicalNewsWebsites->>ScrapingMicroservice: HTTP Request
     activate ScrapingMicroservice
     ScrapingMicroservice->>RabbitMQ: Send scraped data
     activate RabbitMQ
-    RabbitMQ->>NLPMicroservice: Receive scraped data
-    activate NLPMicroservice
-    deactivate NLPMicroservice
+    RabbitMQ->>SummarizationService: Receive scraped data
+    activate SummarizationService
+    deactivate SummarizationService
     deactivate RabbitMQ
     ScrapingMicroservice->>ScrapingDB: Store scraped data
     ScrapingMicroservice->>ScrapingMicroservice: Return response
@@ -269,17 +308,17 @@ Overall, this class diagram shows the components of the NLPMicroservice and thei
 sequenceDiagram
     participant ScrapingMicroservice
     participant RabbitMQ
-    participant NaturalLanguageProcessingMicroservice
+    participant SummarizationService
     participant SummariesDB
 
     ScrapingMicroservice->>RabbitMQ: Sends scraped data
     activate RabbitMQ
-    RabbitMQ->>NaturalLanguageProcessingMicroservice: Receives scraped data
-    activate NaturalLanguageProcessingMicroservice
-    NaturalLanguageProcessingMicroservice->>SummariesDB: Stores summaries
-    SummariesDB-->>NaturalLanguageProcessingMicroservice: Summary stored
-    NaturalLanguageProcessingMicroservice->>RabbitMQ: Sends summaries
-    deactivate NaturalLanguageProcessingMicroservice
+    RabbitMQ->>SummarizationService: Receives scraped data
+    activate SummarizationService
+    SummarizationService->>SummariesDB: Stores summaries
+    SummariesDB-->>SummarizationService: Summary stored
+    SummarizationService->>RabbitMQ: Sends summaries
+    deactivate SummarizationService
     deactivate RabbitMQ
 ```
 
