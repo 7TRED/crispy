@@ -2,6 +2,8 @@ import datetime
 import logging
 import os
 import re
+from dotenv import load_dotenv
+import openai
 
 import pika
 import pymongo
@@ -16,7 +18,6 @@ from summarizer.worker_queues import WorkerQueue
 
 
 class ScrapedArticleListener:
-
     RMQ_HOST = os.environ.get("RMQ_HOST")
     RMQ_PORT = os.environ.get("RMQ_PORT")
     RMQ_USER = os.environ.get("RMQ_USER")
@@ -35,18 +36,17 @@ class ScrapedArticleListener:
     RMQ_PUBLISHER_ROUTING_KEY = "summary.article"
 
     EXCHANGE_TYPE = "topic"
-    BATCH_SIZE = 5
+    BATCH_SIZE = 10
 
     API_URL = "http://host.docker.internal:7071/api/crispy-sum"
 
     def __init__(self):
-
         ## Set up logging
         self._log = logging.getLogger(__name__)
         self._log.setLevel(logging.INFO)
 
         self.summary_queue = WorkerQueue(
-            num_workers=4, task_callback=self._fetch_summary
+            num_workers=1, task_callback=self._fetch_summary
         )
         self.publisher_queue = WorkerQueue(
             num_workers=1, task_callback=self._store_summary
@@ -101,11 +101,9 @@ class ScrapedArticleListener:
         return text
 
     def _fetch_summary(self, article_batch):
-
         ## 1. Make a request to the summarization service
         article_list = ArticleBatch()
         for payload in article_batch:
-
             article = Article()
             article.article_id = payload.get("article_id")
             article.url = payload.get("url")
