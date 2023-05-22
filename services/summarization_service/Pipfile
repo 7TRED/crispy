@@ -4,14 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-scrapy = "2.8.0"
-scrapyd = "1.4.1"
-beautifulsoup4 = "4.11.2"
-scrapyd-client = "1.2.3"
-pymongo = "4.3.3"
 pika = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.10"
+python_full_version = "3.10.6"
