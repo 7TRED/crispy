@@ -2,19 +2,20 @@ import datetime
 import logging
 import os
 import re
-from dotenv import load_dotenv
-import openai
+import time
 
 import pika
 import pymongo
 import requests
-import time
 from summarizer.article_pb2 import Article, ArticleBatch
 from summarizer.rbmq.listener import Listener
 from summarizer.rbmq.publisher import Publisher
 from summarizer.rbmq.rbmqtypes import RMQMessage
-from summarizer.summary_pb2 import SummaryBatch
+from summarizer.summary_pb2 import Summary, SummaryBatch
 from summarizer.worker_queues import WorkerQueue
+
+## FLAG to enable summarization service
+SUMMARIZATION_SERVICE_ENABLED = False
 
 
 class ScrapedArticleListener:
@@ -46,10 +47,10 @@ class ScrapedArticleListener:
         self._log.setLevel(logging.INFO)
 
         self.summary_queue = WorkerQueue(
-            num_workers=1, task_callback=self._fetch_summary
+            num_workers=4, task_callback=self._fetch_summary
         )
         self.publisher_queue = WorkerQueue(
-            num_workers=1, task_callback=self._store_summary
+            num_workers=4, task_callback=self._store_summary
         )
         self._batch = []
 
@@ -87,6 +88,11 @@ class ScrapedArticleListener:
         )
         self._listener.on_message(message_callback=self._callback())
 
+        if not SUMMARIZATION_SERVICE_ENABLED:
+            self._log.warning(
+                "Summarization Model is disabled. Normal summary will be passed"
+            )
+
     def _preprocess_text(self, text):
         # Remove URLs
         text = re.sub(r"http\S+", "", text)
@@ -102,6 +108,9 @@ class ScrapedArticleListener:
 
     def _fetch_summary(self, article_batch):
         ## 1. Make a request to the summarization service
+
+        self._log.info("Fetching summary...")
+
         article_list = ArticleBatch()
         for payload in article_batch:
             article = Article()
@@ -113,25 +122,49 @@ class ScrapedArticleListener:
 
             article_list.articles.append(article)
 
+        ## 4. Deserialize the response
+        summary_list = SummaryBatch()
+
+        if SUMMARIZATION_SERVICE_ENABLED:
+            response = self._summarization_request(article_list=article_list)
+            summary_list.ParseFromString(response.content)
+
+        else:
+            for article in article_list.articles:
+                summary = Summary()
+                summary.article_id = article.article_id
+                summary.summary = article.content
+                summary.date = article.date
+                summary.url = article.url
+                summary.title = article.title
+
+                self._log.info(f"Summary for {article.article_id} is {summary.summary}")
+                summary_list.summaries.append(summary)
+
+        ## 5. Store the summary in the database
+        if self.publisher_queue.status == WorkerQueue.Status.stopped:
+            self.publisher_queue.start()
+
+        self.publisher_queue.add_task(summary_list)
+
+    def _summarization_request(self, article_list: ArticleBatch):
         ## 2. Serialze the article_list
         serialized_article_list = article_list.SerializeToString()
 
         self._log.info(
             f"[{datetime.datetime.now()}]- [x] Fetching summary for {len(article_list.articles)} articles...]"
         )
-        ## 3. Make a request to the summarization service
-        # write code to log the time take to fetch the summary
-        start_time = time.time()
 
+        start_time = time.time()
         response = requests.post(
             self.API_URL, data=serialized_article_list, timeout=1200
         )
-
         end_time = time.time()
 
         self._log.info(
             f"[{datetime.datetime.now()}]- [x] Time taken to fetch summary {end_time - start_time}]"
         )
+
         if response.status_code != 200:
             self._log.error(
                 f"[{datetime.datetime.now()}]- [X] Error while fetching summary: {response.status_code}]"
@@ -142,15 +175,7 @@ class ScrapedArticleListener:
             f"[{datetime.datetime.now()}]- [x] Summary fetched successfully...]"
         )
 
-        ## 4. Deserialize the response
-        summary_list = SummaryBatch()
-        summary_list.ParseFromString(response.content)
-
-        ## 5. Store the summary in the database
-        if self.publisher_queue.status == WorkerQueue.Status.stopped:
-            self.publisher_queue.start()
-
-        self.publisher_queue.add_task(summary_list)
+        return response
 
     def _store_summary(self, summaryBatch: SummaryBatch):
         ## 1. Store the summary in the database
@@ -213,7 +238,6 @@ class ScrapedArticleListener:
                 handle_nack(ch, method.delivery_tag, requeue=False)
                 return
 
-            article = payload.get("content")
             self._log.info(
                 f"[{datetime.datetime.now()}]- [x] Received article: {payload.get('url')}]"
             )

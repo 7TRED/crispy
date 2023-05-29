@@ -186,7 +186,6 @@ class Listener:
 
     @classmethod
     def RMQMessageCallback(cls, message_callback: callable):
-
         retries_nack = 0
 
         def handle_nack(
