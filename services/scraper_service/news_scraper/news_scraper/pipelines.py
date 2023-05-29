@@ -91,18 +91,15 @@ class MessageQueuePipeline:
         rmq_port,
         rmq_user,
         rmq_pass,
-        rmq_queue,
-        rmq_exchange,
-        rmq_routing_key,
     ):
         print("Initializing RMQ pipeline")
         self.rmq_host = rmq_host
         self.rmq_port = rmq_port
         self.rmq_user = rmq_user
         self.rmq_pass = rmq_pass
-        self.rmq_queue = rmq_queue
-        self.rmq_exchange = rmq_exchange
-        self.rmq_routing_key = rmq_routing_key
+        self.rmq_queue = "article_queue"
+        self.rmq_exchange = "article_exchange"
+        self.rmq_routing_key = "scraped.article"
         self.rmq_exchange_type = "topic"
         self.queue = Queue()
 
@@ -117,9 +114,6 @@ class MessageQueuePipeline:
             exchange_type=self.rmq_exchange_type,
             routing_key=self.rmq_routing_key,
             confirm_delivery=True,
-            dead_letter_handling=True,
-            message_ttl=100000,
-            dead_letter_exchange="dl_articles",
         )
         if not self.rmq_host:
             sys.exit("RMQ_URI is not set")
@@ -134,9 +128,6 @@ class MessageQueuePipeline:
             rmq_port=crawler.settings.get("RMQ_PORT", 5672),
             rmq_user=crawler.settings.get("RMQ_USER"),
             rmq_pass=crawler.settings.get("RMQ_PASS"),
-            rmq_queue=crawler.settings.get("RMQ_QUEUE"),
-            rmq_exchange=crawler.settings.get("RMQ_EXCHANGE"),
-            rmq_routing_key=crawler.settings.get("RMQ_ROUTING_KEY"),
         )
 
     def open_spider(self, spider):

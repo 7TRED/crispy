@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message Article {
+    string title = 1;
+    string article_id = 2;
+    string content = 3;
+    string date = 4;
+    string url = 5;
+}
+
+message ArticleBatch {
+    repeated Article articles = 1;
+}

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+
+message Summary {
+    string article_id = 1;
+    string title = 2;
+    string summary = 3;
+    string url = 4;
+    string date = 5;
+}
+
+
+message SummaryBatch {
+    repeated Summary summaries = 1;
+}
