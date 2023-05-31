@@ -54,7 +54,7 @@ services:
   #   environment:
   #     RMQ_HOST: rbmq
   #     RMQ_PORT: 5672
-  #     MONGO_URI: mongodb+srv://ms1514094:ngNcu4DZmmup4fYl@cluster0.v5584ym.mongodb.net
+  #     MONGO_URI: mongodb+srv://user:pass@cluster0.v5584ym.mongodb.net
   #     MONGO_DB: summary
   #   restart: always
   #   depends_on:
@@ -64,7 +64,7 @@ services:
   summary-api:
     build: ./summary_service
     environment:
-      MONGO_URI: mongodb+srv://ms1514094:ngNcu4DZmmup4fYl@cluster0.v5584ym.mongodb.net/
+      MONGO_URI: mongodb+srv://user:pass@cluster0.v5584ym.mongodb.net/
       MONGO_DB: summary
     ports:
       - 3000:3000
