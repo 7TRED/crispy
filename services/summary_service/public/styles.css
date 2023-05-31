@@ -1,3 +1,13 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+.rounded-full {
+	border-radius: 9999px;
+	width: 40px;
+	height: 40px;
+}
+
+.justify-end {
+	justify-content: flex-end;
+}

@@ -3,8 +3,10 @@
 	<head>
 		<title>News</title>
 		<link rel="stylesheet" href="/styles.css" />
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 		<script src="https://cdn.tailwindcss.com"></script>
 		<script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+
 		<style>
 			.loading {
 				animation: pulse 1s infinite;
@@ -33,16 +35,17 @@
 			<h1 class="text-4xl font-bold mb-8">News Summaries</h1>
 			<% news.forEach(summary => { %>
 			<div class="bg-white shadow rounded-lg p-6 mb-4">
-				<h2 class="text-2xl font-bold mb-2"><%= summary.title %></h2>
+				<h2 id="title-<%= summary._id %>" class="text-2xl font-bold mb-2"><%= summary.title %></h2>
 				<p id="summary-<%= summary._id %>" class="text-gray-600 mb-2"><%= summary.summary %></p>
 				<p class="text-gray-500 text-sm mb-4">Published on <%= summary.date.toDateString() %></p>
 				<a href="<%= summary.url %>" class="text-blue-500">Read More</a>
 				<button
+					class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full flex justify-center items-center play-button"
 					id="button-<%= summary._id %>"
-					class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded play-button"
 				>
-					Play
+					<i class="large material-icons">play_arrow</i>
 				</button>
+
 				<div id="audio-container-<%= summary._id %>" class="mt-4 hidden">
 					<audio id="audio-<%= summary._id %>"></audio>
 					<div class="flex items-center mt-2">
@@ -82,7 +85,7 @@
 
 		<footer class="bg-gray-900 py-4">
 			<div class="container mx-auto px-4 text-center">
-				<p class="text-white text-sm">© 2023 Your App. All rights reserved.</p>
+				<p class="text-white text-sm">© 2023 crispy. All rights reserved.</p>
 			</div>
 		</footer>
 
@@ -108,7 +111,6 @@
 
 				btnElement.disabled = true;
 				audioElement.autoplay = true;
-				btnElement.innerText = "Generating...";
 				audioContainer.classList.add("loading");
 				audioContainer.classList.remove("hidden");
 
@@ -121,7 +123,6 @@
 							audioElement.src = blobUrl;
 							audioElement.removeAttribute("autoplay");
 							btnElement.disabled = false;
-							btnElement.innerText = "Generate Audio";
 							btnElement.classList.add("hidden");
 							audioContainer.classList.remove("loading");
 						}
@@ -164,7 +165,9 @@
 				button.addEventListener("click", () => {
 					const id = button.id.split("-")[1];
 					const summary = document.getElementById(`summary-${id}`).innerText;
-					generateAudio(summary, id);
+					const title = document.getElementById(`title-${id}`).innerText;
+
+					generateAudio(`${title} \n ${summary}`, id);
 				});
 			});
 
