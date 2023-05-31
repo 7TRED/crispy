@@ -15,7 +15,7 @@ from summarizer.summary_pb2 import Summary, SummaryBatch
 from summarizer.worker_queues import WorkerQueue
 
 ## FLAG to enable summarization service
-SUMMARIZATION_SERVICE_ENABLED = False
+SUMMARIZATION_SERVICE_ENABLED = True
 
 
 class ScrapedArticleListener:
@@ -39,7 +39,7 @@ class ScrapedArticleListener:
     EXCHANGE_TYPE = "topic"
     BATCH_SIZE = 10
 
-    API_URL = "http://host.docker.internal:7071/api/crispy-sum"
+    API_URL = "http://host.docker.internal:7071/api/crispy_sum_2"
 
     def __init__(self):
         ## Set up logging
@@ -47,7 +47,7 @@ class ScrapedArticleListener:
         self._log.setLevel(logging.INFO)
 
         self.summary_queue = WorkerQueue(
-            num_workers=4, task_callback=self._fetch_summary
+            num_workers=2, task_callback=self._fetch_summary
         )
         self.publisher_queue = WorkerQueue(
             num_workers=4, task_callback=self._store_summary
@@ -126,7 +126,33 @@ class ScrapedArticleListener:
         summary_list = SummaryBatch()
 
         if SUMMARIZATION_SERVICE_ENABLED:
-            response = self._summarization_request(article_list=article_list)
+            ## 2. Serialze the article_list
+            serialized_article_list = article_list.SerializeToString()
+
+            self._log.info(
+                f"[{datetime.datetime.now()}]- [x] Fetching summary for {len(article_list.articles)} articles...]"
+            )
+
+            start_time = time.time()
+            response = requests.post(
+                self.API_URL, data=serialized_article_list, timeout=1200
+            )
+            end_time = time.time()
+
+            self._log.info(
+                f"[{datetime.datetime.now()}]- [x] Time taken to fetch summary {end_time - start_time}]"
+            )
+
+            if response.status_code != 200:
+                self._log.error(
+                    f"[{datetime.datetime.now()}]- [X] Error while fetching summary: {response.status_code}]"
+                )
+                return
+
+            self._log.info(
+                f"[{datetime.datetime.now()}]- [x] Summary fetched successfully...]"
+            )
+            
             summary_list.ParseFromString(response.content)
 
         else:
@@ -148,32 +174,7 @@ class ScrapedArticleListener:
         self.publisher_queue.add_task(summary_list)
 
     def _summarization_request(self, article_list: ArticleBatch):
-        ## 2. Serialze the article_list
-        serialized_article_list = article_list.SerializeToString()
-
-        self._log.info(
-            f"[{datetime.datetime.now()}]- [x] Fetching summary for {len(article_list.articles)} articles...]"
-        )
-
-        start_time = time.time()
-        response = requests.post(
-            self.API_URL, data=serialized_article_list, timeout=1200
-        )
-        end_time = time.time()
-
-        self._log.info(
-            f"[{datetime.datetime.now()}]- [x] Time taken to fetch summary {end_time - start_time}]"
-        )
-
-        if response.status_code != 200:
-            self._log.error(
-                f"[{datetime.datetime.now()}]- [X] Error while fetching summary: {response.status_code}]"
-            )
-            return
-
-        self._log.info(
-            f"[{datetime.datetime.now()}]- [x] Summary fetched successfully...]"
-        )
+        
 
         return response
 
@@ -197,7 +198,7 @@ class ScrapedArticleListener:
         self._publisher.connect()
 
         for summary in summaries:
-            collection = summary.get("date").split("T")[0]
+            collection = "summaries"
             result = self._mongo_db[collection].insert_one(summary)
             summary_id = str(result.inserted_id)
             message = RMQMessage(

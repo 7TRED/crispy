@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>News</title>
+		<link rel="stylesheet" href="/styles.css" />
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+		<style>
+			.loading {
+				animation: pulse 1s infinite;
+			}
+
+			@keyframes pulse {
+				0% {
+					opacity: 0.6;
+				}
+				50% {
+					opacity: 1;
+				}
+				100% {
+					opacity: 0.6;
+				}
+			}
+		</style>
+	</head>
+	<body class="bg-gray-100 relative">
+		<header class="bg-blue-500 py-4 sticky top-0 left-0 right-0">
+			<div class="container mx-auto px-4">
+				<h1 class="text-white text-3xl font-bold">Crispy</h1>
+			</div>
+		</header>
+		<div class="container mx-auto max-w-2xl py-8">
+			<h1 class="text-4xl font-bold mb-8">News Summaries</h1>
+			<% news.forEach(summary => { %>
+			<div class="bg-white shadow rounded-lg p-6 mb-4">
+				<h2 class="text-2xl font-bold mb-2"><%= summary.title %></h2>
+				<p id="summary-<%= summary._id %>" class="text-gray-600 mb-2"><%= summary.summary %></p>
+				<p class="text-gray-500 text-sm mb-4">Published on <%= summary.date.toDateString() %></p>
+				<a href="<%= summary.url %>" class="text-blue-500">Read More</a>
+				<button
+					id="button-<%= summary._id %>"
+					class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded play-button"
+				>
+					Play
+				</button>
+				<div id="audio-container-<%= summary._id %>" class="mt-4 hidden">
+					<audio id="audio-<%= summary._id %>"></audio>
+					<div class="flex items-center mt-2">
+						<button
+							id="tg-<%= summary._id %>"
+							class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded mr-2 toggle-button"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4">
+								<path fill="none" d="M0 0h24v24H0z" />
+								<path
+									d="M3 3h18v2H3V3zm0 8h12v2H3v-2zm0 4h12v2H3v-2zm16-8v10l-6-5zm-2 5V5l6 5z"
+									fill="rgba(255, 255, 255, 0.87)"
+								/>
+							</svg>
+						</button>
+						<span class="text-gray-600">Generated Audio</span>
+					</div>
+				</div>
+			</div>
+			<% }); %>
+
+			<div class="flex justify-center mt-4">
+				<% if (page > 1) { %>
+				<a
+					href="/?page=<%= page - 1 %>"
+					class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mr-2"
+					>Previous</a
+				>
+				<% } %>
+				<a
+					href="/?page=<%= page + 1 %>"
+					class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+					>Next</a
+				>
+			</div>
+		</div>
+
+		<footer class="bg-gray-900 py-4">
+			<div class="container mx-auto px-4 text-center">
+				<p class="text-white text-sm">© 2023 Your App. All rights reserved.</p>
+			</div>
+		</footer>
+
+		<script>
+			function generateAudio(summary, summaryId) {
+				var SpeechSDK;
+				if (!!window.SpeechSDK) {
+					SpeechSDK = window.SpeechSDK;
+				} else {
+					SpeechSDK = require("microsoft-cognitiveservices-speech-sdk");
+				}
+				const subscriptionKey = "5787227e2d274211a7e6bcf19801d39f";
+				const region = "centralindia";
+				const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+				speechConfig.speechSynthesisVoiceName = "en-IN-NeerjaNeural";
+				const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
+
+				const audioContainer = document.getElementById(`audio-container-${summaryId}`);
+				const audioElement = document.getElementById(`audio-${summaryId}`);
+				const btnElement = document.getElementById(`button-${summaryId}`);
+
+				console.log(`Summary ID: ${summaryId}`);
+
+				btnElement.disabled = true;
+				audioElement.autoplay = true;
+				btnElement.innerText = "Generating...";
+				audioContainer.classList.add("loading");
+				audioContainer.classList.remove("hidden");
+
+				synthesizer.speakTextAsync(
+					summary,
+					(result) => {
+						if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+							const audioBlob = result.audioData;
+							const blobUrl = URL.createObjectURL(new Blob([audioBlob]));
+							audioElement.src = blobUrl;
+							audioElement.removeAttribute("autoplay");
+							btnElement.disabled = false;
+							btnElement.innerText = "Generate Audio";
+							btnElement.classList.add("hidden");
+							audioContainer.classList.remove("loading");
+						}
+					},
+					(error) => {
+						console.error(error);
+						btnElement.disabled = false;
+						btnElement.innerText = "Generate Audio";
+						audioContainer.classList.remove("loading");
+					},
+				);
+			}
+
+			function toggleAudio(summaryId) {
+				const audioElement = document.getElementById(`audio-${summaryId}`);
+				const audioContainer = document.getElementById(`audio-container-${summaryId}`);
+				const btnElement = document.getElementById(`tg-${summaryId}`);
+
+				if (audioElement.paused) {
+					audioElement.play();
+					btnElement.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4">
+              <path fill="none" d="M0 0h24v24H0z" />
+              <path d="M6 5h2v14H6zm10 0h2v14h-2z" fill="rgba(255, 255, 255, 0.87)" />
+            </svg>
+          `;
+				} else {
+					audioElement.pause();
+					btnElement.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4">
+              <path fill="none" d="M0 0h24v24H0z" />
+              <path d="M3 3h18v2H3V3zm0 8h12v2H3v-2zm0 4h12v2H3v-2zm16-8v10l-6-5zm-2 5V5l6 5z" fill="rgba(255, 255, 255, 0.87)" />
+            </svg>
+          `;
+				}
+			}
+
+			const buttons = document.querySelectorAll(".play-button");
+			buttons.forEach((button) => {
+				button.addEventListener("click", () => {
+					const id = button.id.split("-")[1];
+					const summary = document.getElementById(`summary-${id}`).innerText;
+					generateAudio(summary, id);
+				});
+			});
+
+			const toggleButtons = document.querySelectorAll(".toggle-button");
+
+			toggleButtons.forEach((button) => {
+				button.addEventListener("click", () => {
+					const id = button.id.split("-")[1];
+					toggleAudio(id);
+				});
+			});
+		</script>
+	</body>
+</html>
